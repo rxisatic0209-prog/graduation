@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Pet 工作状态互动</title>
+  <link rel="stylesheet" href="failure-experiment.css" />
+</head>
+<body data-mode="status" data-failure="low">
+  <div class="desktop">
+    <img class="wallpaper" src="assets/win7-desktop.png" alt="" aria-hidden="true" />
+    <div class="round-dialog" id="roundDialog" role="dialog" aria-modal="true" aria-labelledby="roundDialogTitle">
+      <div class="round-dialog-card">
+        <p class="round-dialog-title" id="roundDialogTitle">进入下一轮互动</p>
+        <p class="round-dialog-note" id="roundDialogNote"></p>
+        <button class="round-dialog-button" id="roundDialogButton">进入下一轮</button>
+      </div>
+    </div>
+    <div class="hud"><div class="counter" id="counter">第 1 / 8 轮互动</div><div class="prompt" id="prompt"></div></div>
+    <div class="scene" id="scene">
+      <div class="pet-zone">
+        <div class="bubble" id="bubble"></div>
+        <div class="pet-shell" id="petShell"><div class="sprite" id="sprite"></div></div>
+        <button class="pet-button" id="petButton" aria-label="点击宠物"></button>
+        <div class="pet-hit" aria-hidden="true"></div>
+      </div>
+      <button class="food hidden" id="food" aria-hidden="true" tabindex="-1"></button>
+    </div>
+  </div>
+  <script src="failure-experiment.js" defer></script>
+</body>
+</html>
