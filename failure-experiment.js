@@ -158,14 +158,18 @@ function finishExperiment() {
   state.finished = true;
   state.waiting = false;
   state.dragging = false;
+  state.pendingRound = null;
+  clearTimeout(state.responseTimer);
+  clearTimeout(state.nextRoundTimer);
   setActionEnabled(false);
   refs.counter.textContent = '第 8 / 8 轮互动';
   refs.prompt.textContent = '全部互动已结束！';
   refs.roundDialogTitle.textContent = '全部互动已结束！';
-  refs.roundDialogNote.textContent = '';
+  refs.roundDialogNote.textContent = '感谢你的体验。';
   refs.roundDialogButton.textContent = '完成';
-  refs.roundDialogButton.disabled = true;
+  refs.roundDialogButton.disabled = false;
   refs.roundDialog.classList.add('show');
+  refs.roundDialogButton.focus();
 }
 
 function showNextRoundDialog() {
@@ -185,6 +189,7 @@ function showNextRoundDialog() {
 }
 
 function enterNextRound() {
+  if (state.finished) return;
   if (!state.pendingRound || state.finished) return;
   state.round = state.pendingRound;
   state.pendingRound = null;
