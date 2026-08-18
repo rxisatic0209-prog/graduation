@@ -9,12 +9,12 @@ const EXPERIMENT_CONFIG = {
     high: [2, 4, 5, 7],
   },
   successText: {
-    status: '正在进行代码审阅，我继续盯一下。',
+    status: '已经完成代码修改，正在进行代码审阅，我继续盯一下。',
     feed: '好开心！谢谢你喂我～',
   },
   prompt: {
-    status: '点击猫咪，等待它显示工作状态。',
-    feed: '把虾拖到猫咪身上，等待猫咪回应。',
+    status: '点击猫咪，获取Claude Code工作状态。',
+    feed: '喂猫咪吃虾。',
   },
 };
 
