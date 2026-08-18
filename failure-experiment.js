@@ -35,6 +35,7 @@ const refs = {
   counter: document.getElementById('counter'),
   prompt: document.getElementById('prompt'),
   roundDialog: document.getElementById('roundDialog'),
+  roundDialogTitle: document.getElementById('roundDialogTitle'),
   roundDialogNote: document.getElementById('roundDialogNote'),
   roundDialogButton: document.getElementById('roundDialogButton'),
 };
@@ -159,7 +160,12 @@ function finishExperiment() {
   state.dragging = false;
   setActionEnabled(false);
   refs.counter.textContent = '第 8 / 8 轮互动';
-  refs.prompt.textContent = '本阶段互动已完成。';
+  refs.prompt.textContent = '全部互动已结束！';
+  refs.roundDialogTitle.textContent = '全部互动已结束！';
+  refs.roundDialogNote.textContent = '';
+  refs.roundDialogButton.textContent = '完成';
+  refs.roundDialogButton.disabled = true;
+  refs.roundDialog.classList.add('show');
 }
 
 function showNextRoundDialog() {
@@ -170,7 +176,10 @@ function showNextRoundDialog() {
   state.pendingRound = state.round + 1;
   state.waiting = false;
   setActionEnabled(false);
+  refs.roundDialogTitle.textContent = '进入下一轮互动';
   refs.roundDialogNote.textContent = `上一轮互动已完成。请点击进入第 ${state.pendingRound} / ${EXPERIMENT_CONFIG.rounds} 轮互动。`;
+  refs.roundDialogButton.textContent = '进入下一轮';
+  refs.roundDialogButton.disabled = false;
   refs.roundDialog.classList.add('show');
   refs.roundDialogButton.focus();
 }
