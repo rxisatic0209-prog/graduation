@@ -139,6 +139,10 @@ function setActionEnabled(enabled) {
   refs.food.disabled = !enabled || state.mode !== 'feed';
 }
 
+function setRoundDialogButtonVisible(visible) {
+  refs.roundDialogButton.hidden = !visible;
+}
+
 function resetActionPosition() {
   if (state.mode !== 'feed') return;
   refs.food.classList.remove('hidden');
@@ -166,10 +170,8 @@ function finishExperiment() {
   refs.prompt.textContent = '全部互动已结束！';
   refs.roundDialogTitle.textContent = '全部互动已结束！';
   refs.roundDialogNote.textContent = '感谢你的体验。';
-  refs.roundDialogButton.textContent = '完成';
-  refs.roundDialogButton.disabled = false;
+  setRoundDialogButtonVisible(false);
   refs.roundDialog.classList.add('show');
-  refs.roundDialogButton.focus();
 }
 
 function showNextRoundDialog() {
@@ -184,6 +186,7 @@ function showNextRoundDialog() {
   refs.roundDialogNote.textContent = `上一轮互动已完成。请点击进入第 ${state.pendingRound} / ${EXPERIMENT_CONFIG.rounds} 轮互动。`;
   refs.roundDialogButton.textContent = '进入下一轮';
   refs.roundDialogButton.disabled = false;
+  setRoundDialogButtonVisible(true);
   refs.roundDialog.classList.add('show');
   refs.roundDialogButton.focus();
 }
