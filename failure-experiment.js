@@ -1,5 +1,7 @@
+const IS_BASELINE = document.body.dataset.stage === 'baseline';
+
 const EXPERIMENT_CONFIG = {
-  rounds: 8,
+  rounds: IS_BASELINE ? 4 : 8,
   failureDelayMs: 5000,
   successHoldMs: 2400,
   failureTransitionMs: 600,
@@ -126,7 +128,7 @@ function spawnSparks() {
 }
 
 function isFailureRound() {
-  return EXPERIMENT_CONFIG.failureRounds[state.failureLevel].includes(state.round);
+  return !IS_BASELINE && EXPERIMENT_CONFIG.failureRounds[state.failureLevel].includes(state.round);
 }
 
 function updateHud() {
@@ -166,10 +168,12 @@ function finishExperiment() {
   clearTimeout(state.responseTimer);
   clearTimeout(state.nextRoundTimer);
   setActionEnabled(false);
-  refs.counter.textContent = '第 8 / 8 轮互动';
-  refs.prompt.textContent = '全部互动已结束！';
-  refs.roundDialogTitle.textContent = '全部互动已结束！';
-  refs.roundDialogNote.textContent = '感谢你的体验。';
+  refs.counter.textContent = `第 ${EXPERIMENT_CONFIG.rounds} / ${EXPERIMENT_CONFIG.rounds} 轮互动`;
+  refs.prompt.textContent = IS_BASELINE ? '体验已结束，请继续填写问卷。' : '全部互动已结束！';
+  refs.roundDialogTitle.textContent = IS_BASELINE ? '互动体验已完成' : '全部互动已结束！';
+  refs.roundDialogNote.textContent = IS_BASELINE
+    ? '请返回见数问卷，继续填写前测。'
+    : '感谢你的体验。';
   setRoundDialogButtonVisible(false);
   refs.roundDialog.classList.add('show');
 }
