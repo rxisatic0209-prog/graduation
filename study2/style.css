@@ -24,7 +24,7 @@ button:disabled { cursor: default; }
 #app { width: min(1080px, 100%); margin: 0 auto; }
 h1, h2, h3, p { margin-top: 0; }
 
-.intro-card, .end-card, .repair-card {
+.intro-card, .end-card {
   border: 1px solid var(--border);
   background: #fff;
   box-shadow: var(--shadow);
@@ -67,7 +67,7 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
 .btn.secondary { border: 1px solid var(--border); background: #fff; color: var(--blue-dark); }
 .btn:hover:not(:disabled) { transform: translateY(-1px); }
 .btn:disabled { opacity: .55; }
-.btn:focus-visible, .choice:focus-visible { outline: 3px solid #a9c7ff; outline-offset: 3px; }
+.btn:focus-visible, .choice:focus-visible, .round-dialog:focus-visible { outline: 3px solid #a9c7ff; outline-offset: 3px; }
 
 .experience { width: 100%; }
 .game-header {
@@ -253,14 +253,25 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   letter-spacing: .04em;
 }
 .system-card p { margin: 0; color: #344054; font-size: 15px; line-height: 1.65; }
-.system-card p.muted-result { color: #8793a6; }
 
-.repair-card {
-  width: min(760px, 100%);
-  margin: 20px auto 0;
-  padding: 30px 36px;
+.round-dialog {
+  width: min(620px, calc(100% - 36px));
+  max-height: calc(100vh - 36px);
+  max-height: calc(100dvh - 36px);
+  margin: auto;
+  padding: 30px;
+  overflow: auto;
+  border: 1px solid var(--border);
   border-radius: 22px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 28px 80px rgba(12, 27, 51, .28);
 }
+.round-dialog::backdrop { background: rgba(10, 21, 39, .55); backdrop-filter: blur(5px); }
+.round-dialog .system-card { width: 100%; min-height: 0; margin: 20px 0 0; box-shadow: none; }
+.round-dialog .modal-actions { margin-top: 22px; }
+.round-dialog .eyebrow { margin-bottom: 8px; }
+.round-dialog h2 { margin-bottom: 0; }
 .repair-message {
   margin: 20px 0;
   padding: 19px 22px;
@@ -288,9 +299,12 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   text-align: left;
   transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
-.choice:hover, .choice.selected, .choice[aria-pressed="true"] {
+@media (hover: hover) {
+  .choice:hover { border-color: #9bb8e7; background: #f9fbff; }
+}
+.choice.selected, .choice[aria-pressed="true"] {
   border-color: var(--blue);
-  background: #f6f9ff;
+  background: var(--blue-soft);
   box-shadow: 0 3px 12px rgba(70, 120, 200, .1);
 }
 .choice b {
@@ -304,7 +318,7 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   font-size: 13px;
 }
 #repairWait { margin: 18px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
-#repairActions { margin-top: 20px; }
+#repairChoices { margin-top: 18px; }
 
 @media (max-width: 760px) {
   .game-stage { height: 530px; }
@@ -349,7 +363,8 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   .game-hint { font-size: 13px; }
   .system-card { margin-top: 16px; padding: 16px 18px; }
   .system-card p { font-size: 14px; }
-  .repair-card { padding: 24px 20px; }
+  .round-dialog { width: calc(100% - 24px); padding: 24px 20px; }
+  .round-dialog .system-card { margin-top: 16px; }
   .repair-message { padding: 16px; font-size: 15px; }
   .choice { font-size: 14px; }
 }

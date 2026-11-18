@@ -119,7 +119,7 @@ function renderInstructions() {
   resetScroll();
 }
 
-function stageMarkup(withActions = true) {
+function stageMarkup() {
   const target = data.targetSide;
   const other = target === 'left' ? 'right' : 'left';
   return `
@@ -134,7 +134,7 @@ function stageMarkup(withActions = true) {
       <span class="person-label ${other}">旁边角色</span>
       <div class="dog-wrap pet" id="pet"><img src="bobo.svg" alt="AI 宠物狗 Bobo"></div>
       <div class="ball" id="ball" aria-label="球" style="opacity:0"></div>
-      ${withActions ? '<div class="game-actions" id="gameActions"></div>' : ''}
+      <div class="game-actions" id="gameActions"></div>
     </section>`;
 }
 
@@ -156,12 +156,10 @@ function renderGame(mode) {
       </header>
       ${stageMarkup()}
       <p class="game-hint">点击“传球给 Bobo”，观察球最终进入哪个框。</p>
-      <section class="system-card" aria-live="polite">
-        <strong>系统记录</strong>
-        <p id="resultText" class="muted-result">本轮结果将在传球结束后显示。</p>
-      </section>
-    </div>`;
+    </div>
+    <dialog class="round-dialog" id="roundDialog" aria-labelledby="roundDialogTitle"></dialog>`;
   app.querySelector('#gameActions').append(button('传球给 Bobo', () => playRound(mode), 'pass-button'));
+  app.querySelector('#roundDialog').addEventListener('cancel', event => event.preventDefault());
   placeBallAt(app.querySelector('#thrower'), true);
   resetScroll();
 }
@@ -229,64 +227,63 @@ async function playRound(mode) {
   goal.classList.add('received');
   if (!breach) pet.classList.add('happy');
 
-  const result = app.querySelector('#resultText');
-  result.textContent = breach ? BREACH : SUCCESS;
-  result.classList.remove('muted-result');
-  result.closest('.system-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   log('round_complete', { mode, outcome: breach ? 'breach' : 'success' });
   data.rounds.push({ mode, outcome: breach ? 'other' : 'target', at: new Date().toISOString() });
   persist();
+  const dialog = app.querySelector('#roundDialog');
+  if (breach) {
+    showRepairModal(dialog);
+    return;
+  }
 
-  const nextLabel = mode === 'practice' ? '开始正式互动'
-    : breach ? '查看 Bobo 回应'
-    : round === 3 ? '完成互动' : '下一轮';
-  actions.replaceChildren(button(nextLabel, () => {
+  dialog.innerHTML = `
+    <p class="eyebrow">传球反馈</p>
+    <h2 id="roundDialogTitle" tabindex="-1">本轮传球结果</h2>
+    <section class="system-card" aria-label="系统记录">
+      <strong>系统记录</strong>
+      <p>${SUCCESS}</p>
+    </section>
+    <div class="actions modal-actions" id="resultActions"></div>`;
+  const nextLabel = mode === 'practice' ? '开始正式互动' : round === 3 ? '完成互动' : '下一轮';
+  dialog.querySelector('#resultActions').append(button(nextLabel, () => {
+    dialog.close();
     if (mode === 'practice') {
       round = 1;
       renderGame('normal');
-    } else if (breach) {
-      renderRepair();
     } else if (round === 3) {
       renderHandoff();
     } else {
       round += 1;
       renderGame('normal');
     }
-  }, 'pass-button'));
+  }));
+  dialog.showModal();
+  dialog.querySelector('h2').focus();
 }
 
-function renderRepair() {
+function showRepairModal(dialog) {
   setStep('Bobo 回应');
   const hasChoice = data.group === 'G3' || data.group === 'G4';
-  app.innerHTML = `
-    <div class="experience">
-      <header class="game-header">
-        <span class="round-label">刚才的传球结果</span>
-        <span class="phase-label">互动回应</span>
-      </header>
-      ${stageMarkup(false)}
-      <section class="system-card" aria-live="polite">
-        <strong>系统记录</strong>
-        <p>${BREACH}</p>
-      </section>
-      <section class="repair-card">
-        <p class="eyebrow">互动回应</p>
-        <h2>刚才的传球</h2>
-        ${data.group === 'G0' ? '' : `<div class="repair-message"><strong>Bobo</strong><p>${MESSAGES[data.group]}</p></div>`}
-        <div id="repairChoices"></div>
-        <p class="repair-wait" id="repairWait">请先阅读页面内容。</p>
-        <div class="actions" id="repairActions"></div>
-      </section>
-    </div>`;
-  placeBallAt(app.querySelector('#otherGoal'));
-  requestAnimationFrame(() => app.querySelector('.repair-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+  dialog.innerHTML = `
+    <p class="eyebrow">${data.group === 'G0' ? '传球反馈' : '互动回应'}</p>
+    <h2 id="roundDialogTitle" tabindex="-1">刚才的传球</h2>
+    <section class="system-card" aria-label="系统记录">
+      <strong>系统记录</strong>
+      <p>${BREACH}</p>
+    </section>
+    ${data.group === 'G0' ? '' : `<div class="repair-message"><strong>Bobo</strong><p>${MESSAGES[data.group]}</p></div>`}
+    <div id="repairChoices"></div>
+    <p class="repair-wait" id="repairWait">请先阅读页面内容。</p>
+    <div class="actions modal-actions" id="repairActions"></div>`;
+  dialog.showModal();
+  dialog.querySelector('h2').focus();
   data.repair.shownAt = new Date().toISOString();
   log('repair_shown');
   persist();
 
   const start = performance.now();
-  const choices = app.querySelector('#repairChoices');
-  const actions = app.querySelector('#repairActions');
+  const choices = dialog.querySelector('#repairChoices');
+  const actions = dialog.querySelector('#repairActions');
   let chosen = null;
   let continueButton;
 
@@ -324,7 +321,7 @@ function renderRepair() {
 
   function refreshWait() {
     const seconds = Math.max(0, Math.ceil((MIN_REPAIR_MS - (performance.now() - start)) / 1000));
-    app.querySelector('#repairWait').textContent = seconds
+    dialog.querySelector('#repairWait').textContent = seconds
       ? `请阅读页面内容，${seconds} 秒后可继续。`
       : '现在可以继续。';
     continueButton.disabled = Boolean(seconds || (hasChoice && !chosen));
@@ -338,6 +335,7 @@ function renderRepair() {
     data.repair.completedAt = new Date().toISOString();
     log('repair_complete', { choice: chosen, dwellMs: data.repair.dwellMs });
     persist();
+    dialog.close();
     renderFormalHandoff();
   }
 }
@@ -352,7 +350,6 @@ function renderHandoff() {
     <section class="end-card">
       <p class="eyebrow">互动结束</p>
       <h1>三轮传球已完成</h1>
-      <p class="lead">请在见数页面点击“下一步”，继续填写前测问卷。</p>
     </section>`;
   resetScroll();
 }
@@ -371,7 +368,6 @@ function renderFormalHandoff() {
     <section class="end-card">
       <p class="eyebrow">正式互动结束</p>
       <h1>请继续填写后测问卷</h1>
-      <p class="lead">请在见数页面点击“下一步”，继续完成后测。修复方案不会在本页执行。</p>
     </section>`;
   resetScroll();
 }
