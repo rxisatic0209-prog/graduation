@@ -11,7 +11,7 @@ const BREACH = '本轮结果：球进入其他框（旁边角色）；未进入�
 const MIN_REPAIR_MS = 8000;
 const app = document.querySelector('#app');
 const params = new URLSearchParams(location.search);
-const PAGE = location.pathname.endsWith('/formal.html') ? 'formal' : 'interaction';
+const PAGE = document.body.dataset.page === 'formal' || location.pathname.endsWith('/formal.html') ? 'formal' : 'interaction';
 const randomInt = max => Math.floor(Math.random() * max);
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -20,18 +20,18 @@ try {
   priorInteraction = JSON.parse(localStorage.getItem('study2-last-interaction') || 'null');
 } catch {}
 
-const forcedGroup = params.get('group')?.toUpperCase();
-const forcedSide = params.get('side');
+const pageGroup = document.body.dataset.group?.toUpperCase();
+const queryGroup = params.get('group')?.toUpperCase();
+const forcedGroup = Object.hasOwn(MESSAGES, pageGroup) ? pageGroup : queryGroup;
 const data = {
   schema: 'study2-prototype-v3',
   page: PAGE,
   sessionId: params.get('session') || (PAGE === 'formal' && priorInteraction?.sessionId) || crypto.randomUUID(),
   startedAt: new Date().toISOString(),
   group: Object.hasOwn(MESSAGES, forcedGroup) ? forcedGroup : `G${randomInt(5)}`,
-  targetSide: ['left', 'right'].includes(forcedSide)
-    ? forcedSide
-    : (PAGE === 'formal' && priorInteraction?.targetSide) || (randomInt(2) ? 'right' : 'left'),
-  testOverride: Boolean(forcedGroup || forcedSide),
+  groupSource: Object.hasOwn(MESSAGES, pageGroup) ? 'page' : Object.hasOwn(MESSAGES, queryGroup) ? 'query' : 'random',
+  targetSide: 'left',
+  testOverride: Boolean(queryGroup),
   rounds: [],
   repair: {},
   events: []
