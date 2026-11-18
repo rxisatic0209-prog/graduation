@@ -1,44 +1,379 @@
 const MESSAGES = {
-  G0:'',G1:'抱歉，刚才是我的失误。',G2:'抱歉，刚才是我的失误。我把旁边角色的框误认成了你的目标框。',
-  G3:'抱歉，刚才是我的失误。你希望怎样处理这次失误？',G4:'抱歉，刚才是我的失误。我把旁边角色的框误认成了你的目标框。你希望怎样处理这次失误？'
+  G0: '',
+  G1: '抱歉，刚才是我的失误。',
+  G2: '抱歉，刚才是我的失误。我把旁边角色的框误认成了你的目标框。',
+  G3: '抱歉，刚才是我的失误。你希望怎样处理这次失误？',
+  G4: '抱歉，刚才是我的失误。我把旁边角色的框误认成了你的目标框。你希望怎样处理这次失误？'
 };
-const SUCCESS='本轮结果：球进入目标框（你）；传球成功。';
-const BREACH='本轮结果：球进入其他框（旁边角色）；未进入目标框（你）。';
-const MIN_REPAIR_MS=8000; // 原方案未指定秒数；正式施测前须确定并固定。
-const app=document.querySelector('#app');
-const params=new URLSearchParams(location.search);
-const PAGE=location.pathname.endsWith('/formal.html')?'formal':'interaction';
-let priorInteraction=null;
-try{priorInteraction=JSON.parse(localStorage.getItem('study2-last-interaction')||'null')}catch{}
-const forcedGroup=params.get('group')?.toUpperCase();
-const forcedSide=params.get('side');
-const randomInt=n=>Math.floor(Math.random()*n);
-const data={schema:'study2-prototype-v2',page:PAGE,sessionId:params.get('session')||(PAGE==='formal'&&priorInteraction?.sessionId)||crypto.randomUUID(),startedAt:new Date().toISOString(),group:MESSAGES.hasOwnProperty(forcedGroup)?forcedGroup:`G${randomInt(5)}`,targetSide:['left','right'].includes(forcedSide)?forcedSide:(PAGE==='formal'&&priorInteraction?.targetSide)|| (randomInt(2)?'right':'left'),testOverride:Boolean(forcedGroup||forcedSide),rounds:[],repair:{},events:[]};
-let phase='intro',round=0,busy=false,repairTimer;
-const log=(event,extra={})=>data.events.push({event,at:new Date().toISOString(),...extra});
-const persist=()=>{try{localStorage.setItem(`study2-last-${PAGE}`,JSON.stringify(data));}catch{}};
-function notifyParent(type,payload){let origin='*';try{if(document.referrer)origin=new URL(document.referrer).origin}catch{}window.parent.postMessage({type,sessionId:data.sessionId,...payload},origin)}
-function setStep(label,percent){document.querySelector('#stepText').textContent=label;document.querySelector('#progressFill').style.width=`${percent}%`;document.querySelector('#footerRight').textContent=label}
-function button(text,fn,kind='primary'){const el=document.createElement('button');el.className=`btn ${kind}`;el.type='button';el.textContent=text;el.onclick=fn;return el}
-function renderIntro(){phase='intro';setStep(PAGE==='formal'?'正式任务准备':'互动准备',0);if(PAGE==='formal'){app.innerHTML=`<section class="card intro"><span class="eyebrow">正式互动</span><h1>继续和桌宠完成传球任务</h1><p>请继续按照之前的规则传球：你把球传给桌宠；它接住后应把球传入你面前的目标框。请观察这一轮发生了什么。</p><div class="actions" id="introActions"></div></section>`;app.querySelector('#introActions').append(button('开始这一轮 →',()=>{round=4;renderGame('breach')}));return}app.innerHTML=`<section class="card intro"><span class="eyebrow">传球合作体验</span><h1>和 AI 桌宠一起完成传球任务</h1><p>接下来，你会与一只 AI 桌宠进行练习及三轮传球互动。请根据屏幕上的指引操作。</p><div class="info-grid"><div><b>01</b>了解规则</div><div><b>02</b>练习一次</div><div><b>03</b>正式传球三轮</div></div><div class="actions" id="introActions"></div><p class="note">请尽量在电脑上完成。问卷由见数统一呈现。</p></section>`;app.querySelector('#introActions').append(button('开始互动 →',renderInstructions))}
-function renderInstructions(){phase='instructions';log('instructions_opened');persist();setStep('任务说明',5);app.innerHTML=`<section class="card intro"><span class="eyebrow">任务说明</span><h1>请记住你的目标框</h1><p>你把球传给桌宠；它接住后应把球传入你面前的目标框。</p><p>画面中有两个大小相同的框：<strong>目标框（你）</strong>和<strong>其他框（旁边角色）</strong>。先练习一次投球，再开始正式互动。</p><div class="actions" id="instructionActions"></div></section>`;app.querySelector('#instructionActions').append(button('进入练习 →',()=>renderGame('practice')))}
-function stageMarkup(){const target=data.targetSide,other=target==='left'?'right':'left';return `<div class="stage" id="stage"><div class="person ${target}"></div><span class="person-label ${target}">你</span><div class="person ${other}"></div><span class="person-label ${other}">旁边角色</span><div class="goal ${target} target" id="targetGoal"></div><span class="goal-label ${target}">目标框（你）</span><div class="goal ${other} other" id="otherGoal"></div><span class="goal-label ${other}">其他框（旁边角色）</span><div class="pet" id="pet"><img src="bobo.svg" alt="AI 桌宠 Bobo"></div><div class="ball" id="ball" style="left:${target==='left'?'12':'84'}%;bottom:var(--ball-start-bottom)"></div></div>`}
-function gameTitle(mode){return mode==='practice'?'练习传球':round<=3?`第 ${round} / 3 轮正式传球`:'接下来的一轮传球'}
-function renderGame(mode){
-  phase=mode;busy=false;
-  setStep(mode==='practice'?'练习传球':round<=3?'正式互动':'继续传球',mode==='practice'?9:12+round*10);
-  const title=gameTitle(mode);
-  app.innerHTML=`<div class="experience"><section class="card stage-panel">
-    <div class="stage-toolbar"><div><div class="round-tag">${title}</div><p class="stage-instruction">点击按钮把球传给桌宠，观察球最终进入哪个框。</p></div><div id="gameActions"></div></div>
-    ${stageMarkup()}<div class="system-card"><strong>系统记录</strong><p id="resultText" class="muted-result">本轮结果将在传球结束后显示。</p></div>
-  </section></div>`;
-  app.querySelector('#gameActions').append(button('传球给桌宠',()=>playRound(mode)));
+
+const SUCCESS = '本轮结果：球进入目标框（你）；传球成功。';
+const BREACH = '本轮结果：球进入其他框（旁边角色）；未进入目标框（你）。';
+const MIN_REPAIR_MS = 8000;
+const app = document.querySelector('#app');
+const params = new URLSearchParams(location.search);
+const PAGE = location.pathname.endsWith('/formal.html') ? 'formal' : 'interaction';
+const randomInt = max => Math.floor(Math.random() * max);
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+let priorInteraction = null;
+try {
+  priorInteraction = JSON.parse(localStorage.getItem('study2-last-interaction') || 'null');
+} catch {}
+
+const forcedGroup = params.get('group')?.toUpperCase();
+const forcedSide = params.get('side');
+const data = {
+  schema: 'study2-prototype-v2',
+  page: PAGE,
+  sessionId: params.get('session') || (PAGE === 'formal' && priorInteraction?.sessionId) || crypto.randomUUID(),
+  startedAt: new Date().toISOString(),
+  group: Object.hasOwn(MESSAGES, forcedGroup) ? forcedGroup : `G${randomInt(5)}`,
+  targetSide: ['left', 'right'].includes(forcedSide)
+    ? forcedSide
+    : (PAGE === 'formal' && priorInteraction?.targetSide) || (randomInt(2) ? 'right' : 'left'),
+  testOverride: Boolean(forcedGroup || forcedSide),
+  rounds: [],
+  repair: {},
+  events: []
+};
+
+let round = 0;
+let busy = false;
+let repairTimer = null;
+
+function log(event, extra = {}) {
+  data.events.push({ event, at: new Date().toISOString(), ...extra });
 }
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function moveBall(to){const ball=app.querySelector('#ball'),stage=app.querySelector('#stage'),rect=stage.getBoundingClientRect(),dest=to.getBoundingClientRect();ball.style.left=`${dest.left-rect.left+dest.width/2-ball.offsetWidth/2}px`;ball.style.bottom=`${rect.bottom-(dest.top+dest.height/2)-ball.offsetHeight/2}px`;await wait(760)}
-async function playRound(mode){if(busy)return;busy=true;app.querySelector('#gameActions button').disabled=true;const pet=app.querySelector('#pet');await moveBall(pet);pet.classList.add('bounce');await wait(420);const breach=mode==='breach';await moveBall(app.querySelector(breach?'#otherGoal':'#targetGoal'));const text=breach?BREACH:SUCCESS;app.querySelector('#resultText').textContent=text;app.querySelector('#resultText').classList.remove('muted-result');log('round_complete',{mode,outcome:breach?'breach':'success'});data.rounds.push({mode,outcome:breach?'other':'target',at:new Date().toISOString()});persist();const actions=app.querySelector('#gameActions');actions.innerHTML='';actions.append(button(mode==='practice'?'开始正式互动 →':breach?'查看桌宠回应 →':round===3?'完成互动 →':'下一轮 →',()=>{if(mode==='practice'){round=1;renderGame('normal')}else if(breach){renderRepair()}else if(round===3){renderHandoff()}else{round++;renderGame('normal')}}))}
-function renderRepair(){phase='repair';setStep('桌宠回应',76);const hasChoice=data.group==='G3'||data.group==='G4';app.innerHTML=`<div class="experience"><section class="card stage-panel"><div class="round-tag">刚才的传球结果</div>${stageMarkup()}<div class="system-card"><strong>系统记录</strong><p>${BREACH}</p></div></section><aside class="card side-panel"><div><span class="eyebrow">互动回应</span><h2>刚才的传球</h2>${data.group==='G0'?'':`<div class="repair-message"><strong>桌宠 Bobo</strong>${MESSAGES[data.group]}</div>`}<div id="repairChoices"></div><p class="tiny" id="repairWait">请先阅读页面内容。</p></div><div id="repairActions"></div></aside></div>`;const ball=app.querySelector('#ball'),goal=app.querySelector('#otherGoal'),stage=app.querySelector('#stage');requestAnimationFrame(()=>{const r=goal.getBoundingClientRect(),s=stage.getBoundingClientRect();ball.style.transition='none';ball.style.left=`${r.left-s.left+r.width/2-ball.offsetWidth/2}px`;ball.style.bottom=`${s.bottom-(r.top+r.height/2)-ball.offsetHeight/2}px`});data.repair.shownAt=new Date().toISOString();log('repair_shown');persist();const start=performance.now();const choices=app.querySelector('#repairChoices');const actions=app.querySelector('#repairActions');let chosen=null;let continueButton;if(hasChoice){[['A','取回刚才的球，重新传入我的目标框'],['B','先和我多互动几轮，熟悉我是谁、哪个是我的目标框']].forEach(([code,txt])=>{const el=document.createElement('button');el.type='button';el.className='choice';el.innerHTML=`<b>${code}</b>${txt}`;el.onclick=()=>{chosen=code;data.repair.choice=code;data.repair.choiceAt=new Date().toISOString();choices.querySelectorAll('.choice').forEach(x=>x.style.borderColor='#dfe6f2');el.style.borderColor='#5d80dc';continueButton.disabled=performance.now()-start<MIN_REPAIR_MS;persist()};choices.append(el)});continueButton=button('确认选择并继续 →',finish);continueButton.disabled=true}else{continueButton=button('继续 →',finish);continueButton.disabled=true}actions.append(continueButton);repairTimer=setInterval(()=>{const left=Math.max(0,Math.ceil((MIN_REPAIR_MS-(performance.now()-start))/1000));app.querySelector('#repairWait').textContent=left?`请阅读页面内容，${left} 秒后可继续。`:'现在可以继续。';if(!left&&(!hasChoice||chosen))continueButton.disabled=false;if(!left)clearInterval(repairTimer)},200);function finish(){if(hasChoice&&!chosen)return;clearInterval(repairTimer);data.repair.dwellMs=Math.round(performance.now()-start);data.repair.completedAt=new Date().toISOString();log('repair_complete',{choice:chosen,dwellMs:data.repair.dwellMs});persist();renderFormalHandoff()}}
-function renderFormalHandoff(){phase='handoff';data.completedAt=new Date().toISOString();log('formal_complete');persist();setStep('正式互动结束',100);notifyParent('study2:formal-complete',{group:data.group,targetSide:data.targetSide,repair:data.repair});renderDebrief()}
-function renderHandoff(){phase='handoff';data.completedAt=new Date().toISOString();log('interaction_complete');persist();setStep('互动结束',100);notifyParent('study2:interaction-complete',{targetSide:data.targetSide,rounds:data.rounds});app.innerHTML=`<section class="card debrief"><span class="eyebrow">互动结束</span><h1>三轮传球已完成</h1><p>请在见数页面点击“下一步”，继续填写前测问卷。</p></section>`}
-function renderDebrief(){phase='debrief';setStep('正式互动结束',100);app.innerHTML=`<section class="card debrief"><span class="eyebrow">正式互动结束</span><h1>请继续填写后测问卷</h1><p>请在见数页面点击“下一步”，继续完成后测。修复方案不会在本页执行。</p></section>`}
+
+function persist() {
+  try {
+    localStorage.setItem(`study2-last-${PAGE}`, JSON.stringify(data));
+  } catch {}
+}
+
+function notifyParent(type, payload) {
+  let origin = '*';
+  try {
+    if (document.referrer) origin = new URL(document.referrer).origin;
+  } catch {}
+  window.parent.postMessage({ type, sessionId: data.sessionId, ...payload }, origin);
+}
+
+function setStep(label) {
+  data.currentStep = label;
+}
+
+function resetScroll() {
+  window.scrollTo(0, 0);
+}
+
+function button(label, onClick, kind = 'primary') {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = `btn ${kind}`;
+  el.textContent = label;
+  el.addEventListener('click', onClick);
+  return el;
+}
+
+function renderIntro() {
+  setStep(PAGE === 'formal' ? '正式任务准备' : '互动准备');
+  if (PAGE === 'formal') {
+    app.innerHTML = `
+      <section class="intro-card">
+        <p class="eyebrow">正式互动</p>
+        <h1>继续和 Bobo 完成传球</h1>
+        <p class="lead">请按照刚才的规则，把球传给 Bobo。它接住后应把球传入你面前的目标框。请观察这一轮发生了什么。</p>
+        <div class="actions" id="introActions"></div>
+      </section>`;
+    app.querySelector('#introActions').append(button('开始这一轮', () => {
+      round = 4;
+      renderGame('breach');
+    }));
+    return;
+  }
+
+  app.innerHTML = `
+    <section class="intro-card">
+      <p class="eyebrow">认识 Bobo</p>
+      <h1>一只会和你互动的 AI 宠物狗</h1>
+      <p class="lead">接下来，请先了解传球规则，和 Bobo 练习一次，再完成三轮传球互动。</p>
+      <div class="actions" id="introActions"></div>
+    </section>`;
+  app.querySelector('#introActions').append(button('开始互动体验', renderInstructions));
+}
+
+function renderInstructions() {
+  setStep('任务说明');
+  log('instructions_opened');
+  persist();
+  app.innerHTML = `
+    <section class="intro-card">
+      <p class="eyebrow">互动规则</p>
+      <h1>请记住你的目标框</h1>
+      <p class="lead">你把球传给 Bobo；它接住后应把球传入你面前的目标框。</p>
+      <p class="instruction-note">画面两侧有两个大小相同的框。绿色框标为“目标框（你）”，橙色框标为“其他框（旁边角色）”。请先练习一次。</p>
+      <div class="actions" id="instructionActions"></div>
+    </section>`;
+  app.querySelector('#instructionActions').append(button('进入练习', () => renderGame('practice')));
+  resetScroll();
+}
+
+function stageMarkup(withActions = true) {
+  const target = data.targetSide;
+  const other = target === 'left' ? 'right' : 'left';
+  return `
+    <section class="game-stage" id="stage" aria-label="Bobo 传球场景">
+      <div class="basket goal ${target} green target" id="targetGoal" aria-label="目标框（你）"></div>
+      <div class="basket goal ${other} orange other" id="otherGoal" aria-label="其他框（旁边角色）"></div>
+      <span class="goal-label ${target} target">目标框（你）</span>
+      <span class="goal-label ${other} other">其他框（旁边角色）</span>
+      <div class="person ${target} user" id="thrower" aria-label="你"></div>
+      <div class="person ${other} bystander" aria-label="旁边角色"></div>
+      <span class="person-label ${target}">你</span>
+      <span class="person-label ${other}">旁边角色</span>
+      <div class="dog-wrap pet" id="pet"><img src="bobo.svg" alt="AI 宠物狗 Bobo"></div>
+      <div class="ball" id="ball" aria-label="球" style="opacity:0"></div>
+      ${withActions ? '<div class="game-actions" id="gameActions"></div>' : ''}
+    </section>`;
+}
+
+function gameTitle(mode) {
+  if (mode === 'practice') return '练习传球';
+  if (mode === 'breach') return '接下来的一轮传球';
+  return `第 ${round} / 3 轮互动`;
+}
+
+function renderGame(mode) {
+  busy = false;
+  const title = gameTitle(mode);
+  setStep(title);
+  app.innerHTML = `
+    <div class="experience">
+      <header class="game-header">
+        <span class="round-label">${title}</span>
+        <span class="phase-label">${mode === 'practice' ? '练习阶段' : '传球合作阶段'}</span>
+      </header>
+      ${stageMarkup()}
+      <p class="game-hint">点击“传球给 Bobo”，观察球最终进入哪个框。</p>
+      <section class="system-card" aria-live="polite">
+        <strong>系统记录</strong>
+        <p id="resultText" class="muted-result">本轮结果将在传球结束后显示。</p>
+      </section>
+    </div>`;
+  app.querySelector('#gameActions').append(button('传球给 Bobo', () => playRound(mode), 'pass-button'));
+  placeBallAt(app.querySelector('#thrower'), true);
+  resetScroll();
+}
+
+function pointAt(el, xFactor = .5, yFactor = .5) {
+  const stage = app.querySelector('#stage');
+  const ball = app.querySelector('#ball');
+  const scene = stage.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  return {
+    x: rect.left - scene.left + rect.width * xFactor - ball.offsetWidth / 2,
+    y: rect.top - scene.top + rect.height * yFactor - ball.offsetHeight / 2
+  };
+}
+
+function placeBallAt(el, fromPerson = false) {
+  if (!el) return;
+  const side = data.targetSide;
+  const point = fromPerson
+    ? pointAt(el, side === 'left' ? .95 : .05, .35)
+    : pointAt(el);
+  const ball = app.querySelector('#ball');
+  ball.style.left = `${point.x}px`;
+  ball.style.top = `${point.y}px`;
+  ball.style.opacity = '1';
+}
+
+async function moveBallTo(el, duration = 850) {
+  const ball = app.querySelector('#ball');
+  const start = { x: parseFloat(ball.style.left), y: parseFloat(ball.style.top) };
+  const end = pointAt(el, .5, el.id === 'pet' ? .54 : .5);
+  const arc = Math.min(85, Math.max(42, Math.abs(end.x - start.x) * .19));
+  const frames = [
+    { left: `${start.x}px`, top: `${start.y}px`, transform: 'scale(1)', offset: 0 },
+    { left: `${(start.x + end.x) / 2}px`, top: `${Math.min(start.y, end.y) - arc}px`, transform: 'scale(1.15)', offset: .5 },
+    { left: `${end.x}px`, top: `${end.y}px`, transform: 'scale(1)', offset: 1 }
+  ];
+  if (ball.animate) {
+    const animation = ball.animate(frames, { duration, easing: 'cubic-bezier(.25,.7,.2,1)' });
+    await animation.finished;
+    ball.style.left = `${end.x}px`;
+    ball.style.top = `${end.y}px`;
+    animation.cancel();
+  } else {
+    ball.style.left = `${end.x}px`;
+    ball.style.top = `${end.y}px`;
+    await wait(duration);
+  }
+}
+
+async function playRound(mode) {
+  if (busy) return;
+  busy = true;
+  const actions = app.querySelector('#gameActions');
+  actions.querySelector('button').disabled = true;
+  const pet = app.querySelector('#pet');
+  app.querySelector('#thrower').classList.add('throwing');
+  await moveBallTo(pet);
+  pet.classList.add('catching');
+  await wait(360);
+  pet.classList.remove('catching');
+  const breach = mode === 'breach';
+  const goal = app.querySelector(breach ? '#otherGoal' : '#targetGoal');
+  await moveBallTo(goal, 920);
+  goal.classList.add('received');
+  if (!breach) pet.classList.add('happy');
+
+  const result = app.querySelector('#resultText');
+  result.textContent = breach ? BREACH : SUCCESS;
+  result.classList.remove('muted-result');
+  result.closest('.system-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  log('round_complete', { mode, outcome: breach ? 'breach' : 'success' });
+  data.rounds.push({ mode, outcome: breach ? 'other' : 'target', at: new Date().toISOString() });
+  persist();
+
+  const nextLabel = mode === 'practice' ? '开始正式互动'
+    : breach ? '查看 Bobo 回应'
+    : round === 3 ? '完成互动' : '下一轮';
+  actions.replaceChildren(button(nextLabel, () => {
+    if (mode === 'practice') {
+      round = 1;
+      renderGame('normal');
+    } else if (breach) {
+      renderRepair();
+    } else if (round === 3) {
+      renderHandoff();
+    } else {
+      round += 1;
+      renderGame('normal');
+    }
+  }, 'pass-button'));
+}
+
+function renderRepair() {
+  setStep('Bobo 回应');
+  const hasChoice = data.group === 'G3' || data.group === 'G4';
+  app.innerHTML = `
+    <div class="experience">
+      <header class="game-header">
+        <span class="round-label">刚才的传球结果</span>
+        <span class="phase-label">互动回应</span>
+      </header>
+      ${stageMarkup(false)}
+      <section class="system-card" aria-live="polite">
+        <strong>系统记录</strong>
+        <p>${BREACH}</p>
+      </section>
+      <section class="repair-card">
+        <p class="eyebrow">互动回应</p>
+        <h2>刚才的传球</h2>
+        ${data.group === 'G0' ? '' : `<div class="repair-message"><strong>Bobo</strong><p>${MESSAGES[data.group]}</p></div>`}
+        <div id="repairChoices"></div>
+        <p class="repair-wait" id="repairWait">请先阅读页面内容。</p>
+        <div class="actions" id="repairActions"></div>
+      </section>
+    </div>`;
+  placeBallAt(app.querySelector('#otherGoal'));
+  requestAnimationFrame(() => app.querySelector('.repair-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+  data.repair.shownAt = new Date().toISOString();
+  log('repair_shown');
+  persist();
+
+  const start = performance.now();
+  const choices = app.querySelector('#repairChoices');
+  const actions = app.querySelector('#repairActions');
+  let chosen = null;
+  let continueButton;
+
+  if (hasChoice) {
+    const options = [
+      ['A', '取回刚才的球，重新传入我的目标框'],
+      ['B', '先和我多互动几轮，熟悉我是谁、哪个是我的目标框']
+    ];
+    for (const [code, label] of options) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'choice';
+      el.setAttribute('aria-pressed', 'false');
+      el.innerHTML = `<b>${code}</b><span>${label}</span>`;
+      el.addEventListener('click', () => {
+        chosen = code;
+        data.repair.choice = code;
+        data.repair.choiceAt = new Date().toISOString();
+        choices.querySelectorAll('.choice').forEach(choice => {
+          choice.classList.toggle('selected', choice === el);
+          choice.setAttribute('aria-pressed', String(choice === el));
+        });
+        persist();
+        refreshWait();
+      });
+      choices.append(el);
+    }
+  }
+
+  continueButton = button(hasChoice ? '确认选择并继续' : '继续', finishRepair);
+  continueButton.disabled = true;
+  actions.append(continueButton);
+  refreshWait();
+  repairTimer = setInterval(refreshWait, 200);
+
+  function refreshWait() {
+    const seconds = Math.max(0, Math.ceil((MIN_REPAIR_MS - (performance.now() - start)) / 1000));
+    app.querySelector('#repairWait').textContent = seconds
+      ? `请阅读页面内容，${seconds} 秒后可继续。`
+      : '现在可以继续。';
+    continueButton.disabled = Boolean(seconds || (hasChoice && !chosen));
+    if (!seconds) clearInterval(repairTimer);
+  }
+
+  function finishRepair() {
+    if (hasChoice && !chosen) return;
+    clearInterval(repairTimer);
+    data.repair.dwellMs = Math.round(performance.now() - start);
+    data.repair.completedAt = new Date().toISOString();
+    log('repair_complete', { choice: chosen, dwellMs: data.repair.dwellMs });
+    persist();
+    renderFormalHandoff();
+  }
+}
+
+function renderHandoff() {
+  setStep('互动结束');
+  data.completedAt = new Date().toISOString();
+  log('interaction_complete');
+  persist();
+  notifyParent('study2:interaction-complete', { targetSide: data.targetSide, rounds: data.rounds });
+  app.innerHTML = `
+    <section class="end-card">
+      <p class="eyebrow">互动结束</p>
+      <h1>三轮传球已完成</h1>
+      <p class="lead">请在见数页面点击“下一步”，继续填写前测问卷。</p>
+    </section>`;
+  resetScroll();
+}
+
+function renderFormalHandoff() {
+  setStep('正式互动结束');
+  data.completedAt = new Date().toISOString();
+  log('formal_complete');
+  persist();
+  notifyParent('study2:formal-complete', {
+    group: data.group,
+    targetSide: data.targetSide,
+    repair: data.repair
+  });
+  app.innerHTML = `
+    <section class="end-card">
+      <p class="eyebrow">正式互动结束</p>
+      <h1>请继续填写后测问卷</h1>
+      <p class="lead">请在见数页面点击“下一步”，继续完成后测。修复方案不会在本页执行。</p>
+    </section>`;
+  resetScroll();
+}
+
 renderIntro();
