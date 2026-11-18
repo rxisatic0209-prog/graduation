@@ -234,26 +234,6 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
 .game-actions .pass-button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 3px 0 #244d8e; }
 .game-hint { margin: 16px auto 0; color: #667085; font-size: 14px; line-height: 1.6; text-align: center; }
 
-.system-card {
-  width: min(760px, 100%);
-  min-height: 88px;
-  margin: 20px auto 0;
-  padding: 19px 24px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 8px 25px rgba(28, 52, 91, .08);
-}
-.system-card strong {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--blue-dark);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .04em;
-}
-.system-card p { margin: 0; color: #344054; font-size: 15px; line-height: 1.65; }
-
 .round-dialog {
   width: min(620px, calc(100% - 36px));
   max-height: calc(100vh - 36px);
@@ -268,7 +248,10 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   box-shadow: 0 28px 80px rgba(12, 27, 51, .28);
 }
 .round-dialog::backdrop { background: rgba(10, 21, 39, .55); backdrop-filter: blur(5px); }
-.round-dialog .system-card { width: 100%; min-height: 0; margin: 20px 0 0; box-shadow: none; }
+.round-dialog.result-only { width: min(560px, calc(100% - 36px)); text-align: center; }
+.round-dialog.result-only .modal-actions { justify-content: center; }
+.round-dialog .result-message { margin: 20px 0 0; color: #344054; font-size: 18px; font-weight: 700; line-height: 1.6; }
+.round-dialog.result-only .result-message { font-size: 22px; font-weight: 800; }
 .round-dialog .modal-actions { margin-top: 22px; }
 .round-dialog .eyebrow { margin-bottom: 8px; }
 .round-dialog h2 { margin-bottom: 0; }
@@ -361,10 +344,10 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   .game-actions { bottom: 17px; }
   .game-actions .pass-button { min-width: 166px; min-height: 42px; font-size: 16px; }
   .game-hint { font-size: 13px; }
-  .system-card { margin-top: 16px; padding: 16px 18px; }
-  .system-card p { font-size: 14px; }
   .round-dialog { width: calc(100% - 24px); padding: 24px 20px; }
-  .round-dialog .system-card { margin-top: 16px; }
+  .round-dialog.result-only { width: calc(100% - 24px); }
+  .round-dialog .result-message { font-size: 16px; }
+  .round-dialog.result-only .result-message { font-size: 19px; }
   .repair-message { padding: 16px; font-size: 15px; }
   .choice { font-size: 14px; }
 }

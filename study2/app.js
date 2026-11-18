@@ -23,7 +23,7 @@ try {
 const forcedGroup = params.get('group')?.toUpperCase();
 const forcedSide = params.get('side');
 const data = {
-  schema: 'study2-prototype-v2',
+  schema: 'study2-prototype-v3',
   page: PAGE,
   sessionId: params.get('session') || (PAGE === 'formal' && priorInteraction?.sessionId) || crypto.randomUUID(),
   startedAt: new Date().toISOString(),
@@ -83,12 +83,12 @@ function renderIntro() {
       <section class="intro-card">
         <p class="eyebrow">正式互动</p>
         <h1>继续和 Bobo 完成传球</h1>
-        <p class="lead">请按照刚才的规则，把球传给 Bobo。它接住后应把球传入你面前的目标框。请观察这一轮发生了什么。</p>
+        <p class="lead">请按照刚才的规则，把球传给 Bobo。它接住后应把球传入你面前的目标框。请观察每轮发生了什么。</p>
         <div class="actions" id="introActions"></div>
       </section>`;
-    app.querySelector('#introActions').append(button('开始这一轮', () => {
-      round = 4;
-      renderGame('breach');
+    app.querySelector('#introActions').append(button('开始正式互动', () => {
+      round = 1;
+      renderGame('normal');
     }));
     return;
   }
@@ -97,7 +97,7 @@ function renderIntro() {
     <section class="intro-card">
       <p class="eyebrow">认识 Bobo</p>
       <h1>一只会和你互动的 AI 宠物狗</h1>
-      <p class="lead">接下来，请先了解传球规则，和 Bobo 练习一次，再完成三轮传球互动。</p>
+      <p class="lead">接下来，请先了解传球规则，再和 Bobo 练习一次传球。</p>
       <div class="actions" id="introActions"></div>
     </section>`;
   app.querySelector('#introActions').append(button('开始互动体验', renderInstructions));
@@ -239,19 +239,17 @@ async function playRound(mode) {
   dialog.innerHTML = `
     <p class="eyebrow">传球反馈</p>
     <h2 id="roundDialogTitle" tabindex="-1">本轮传球结果</h2>
-    <section class="system-card" aria-label="系统记录">
-      <strong>系统记录</strong>
-      <p>${SUCCESS}</p>
-    </section>
+    <p class="result-message">${SUCCESS}</p>
     <div class="actions modal-actions" id="resultActions"></div>`;
-  const nextLabel = mode === 'practice' ? '开始正式互动' : round === 3 ? '完成互动' : '下一轮';
+  dialog.classList.add('result-only');
+  const nextLabel = mode === 'practice' ? '完成练习' : round === 3 ? '继续传球' : '下一轮';
   dialog.querySelector('#resultActions').append(button(nextLabel, () => {
     dialog.close();
     if (mode === 'practice') {
-      round = 1;
-      renderGame('normal');
-    } else if (round === 3) {
       renderHandoff();
+    } else if (round === 3) {
+      round = 4;
+      renderGame('breach');
     } else {
       round += 1;
       renderGame('normal');
@@ -267,11 +265,8 @@ function showRepairModal(dialog) {
   dialog.innerHTML = `
     <p class="eyebrow">${data.group === 'G0' ? '传球反馈' : '互动回应'}</p>
     <h2 id="roundDialogTitle" tabindex="-1">刚才的传球</h2>
-    <section class="system-card" aria-label="系统记录">
-      <strong>系统记录</strong>
-      <p>${BREACH}</p>
-    </section>
-    ${data.group === 'G0' ? '' : `<div class="repair-message"><strong>Bobo</strong><p>${MESSAGES[data.group]}</p></div>`}
+    <p class="result-message">${BREACH}</p>
+    ${data.group === 'G0' ? '' : `<div class="repair-message"><strong>Bobo 的回应</strong><p>${MESSAGES[data.group]}</p></div>`}
     <div id="repairChoices"></div>
     <p class="repair-wait" id="repairWait">请先阅读页面内容。</p>
     <div class="actions modal-actions" id="repairActions"></div>`;
@@ -349,7 +344,7 @@ function renderHandoff() {
   app.innerHTML = `
     <section class="end-card">
       <p class="eyebrow">互动结束</p>
-      <h1>三轮传球已完成</h1>
+      <h1>传球练习已完成</h1>
     </section>`;
   resetScroll();
 }
