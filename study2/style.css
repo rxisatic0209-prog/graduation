@@ -365,7 +365,6 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   color: var(--blue-dark);
   font-size: 13px;
 }
-#repairWait { margin: 18px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
 #repairChoices { margin-top: 18px; }
 
 @media (max-width: 760px) {

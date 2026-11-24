@@ -39,7 +39,7 @@ const BOBO_SVG = `
 
 const SUCCESS = '本轮结果：球进入目标框（你）；传球成功。';
 const BREACH = '本轮结果：球进入其他框（旁边角色）；未进入目标框（你）。';
-const MIN_REPAIR_MS = 8000;
+const PRACTICE_ROUNDS = 3;
 const app = document.querySelector('#app');
 const params = new URLSearchParams(location.search);
 const PAGE = document.body.dataset.page === 'formal' || location.pathname.endsWith('/formal.html') ? 'formal' : 'interaction';
@@ -70,7 +70,7 @@ const data = {
 
 let round = 0;
 let busy = false;
-let repairTimer = null;
+let practiceRound = 1;
 
 function log(event, extra = {}) {
   data.events.push({ event, at: new Date().toISOString(), ...extra });
@@ -128,7 +128,7 @@ function renderIntro() {
     <section class="intro-card">
       <p class="eyebrow">认识 Bobo</p>
       <h1>一只会和你互动的 AI 宠物狗</h1>
-      <p class="lead">接下来，请先了解传球规则，再和 Bobo 练习一次传球。</p>
+      <p class="lead">接下来，请先了解传球规则，再和 Bobo 练习三次传球。</p>
       <div class="actions" id="introActions"></div>
     </section>`;
   app.querySelector('#introActions').append(button('开始互动体验', renderInstructions));
@@ -143,7 +143,7 @@ function renderInstructions() {
       <p class="eyebrow">互动规则</p>
       <h1>请记住你的目标框</h1>
       <p class="lead">你把球传给 Bobo；它接住后应把球传入你面前的目标框。</p>
-      <p class="instruction-note">画面两侧有两个大小相同的框。绿色框标为“目标框（你）”，橙色框标为“其他框（旁边角色）”。请先练习一次。</p>
+      <p class="instruction-note">画面两侧有两个大小相同的框。绿色框标为“目标框（你）”，橙色框标为“其他框（旁边角色）”。请先练习三次。</p>
       <div class="actions" id="instructionActions"></div>
     </section>`;
   app.querySelector('#instructionActions').append(button('进入练习', () => renderGame('practice')));
@@ -170,7 +170,7 @@ function stageMarkup() {
 }
 
 function gameTitle(mode) {
-  if (mode === 'practice') return '练习传球';
+  if (mode === 'practice') return `第 ${practiceRound} / ${PRACTICE_ROUNDS} 次练习`;
   if (mode === 'breach') return '接下来的一轮传球';
   return `第 ${round} / 3 轮互动`;
 }
@@ -282,11 +282,18 @@ async function playRound(mode) {
     <p class="result-message">${SUCCESS}</p>
     <div class="actions modal-actions" id="resultActions"></div>`;
   dialog.classList.add('result-only');
-  const nextLabel = mode === 'practice' ? '完成练习' : round === 3 ? '继续传球' : '下一轮';
+  const nextLabel = mode === 'practice'
+    ? practiceRound === PRACTICE_ROUNDS ? '完成练习' : '下一次练习'
+    : round === 3 ? '继续传球' : '下一轮';
   dialog.querySelector('#resultActions').append(button(nextLabel, () => {
     dialog.close();
     if (mode === 'practice') {
-      renderHandoff();
+      if (practiceRound < PRACTICE_ROUNDS) {
+        practiceRound += 1;
+        renderGame('practice');
+      } else {
+        renderHandoff();
+      }
     } else if (round === 3) {
       round = 4;
       renderGame('breach');
@@ -308,7 +315,6 @@ function showRepairModal(dialog) {
     <p class="result-message">${BREACH}</p>
     ${data.group === 'G0' ? '' : `<div class="repair-message"><strong>Bobo 的回应</strong><p>${MESSAGES[data.group]}</p></div>`}
     <div id="repairChoices"></div>
-    <p class="repair-wait" id="repairWait">请先阅读页面内容。</p>
     <div class="actions modal-actions" id="repairActions"></div>`;
   dialog.showModal();
   dialog.querySelector('h2').focus();
@@ -342,30 +348,18 @@ function showRepairModal(dialog) {
           choice.setAttribute('aria-pressed', String(choice === el));
         });
         persist();
-        refreshWait();
+        continueButton.disabled = false;
       });
       choices.append(el);
     }
   }
 
   continueButton = button(hasChoice ? '确认选择并继续' : '继续', finishRepair);
-  continueButton.disabled = true;
+  continueButton.disabled = hasChoice;
   actions.append(continueButton);
-  refreshWait();
-  repairTimer = setInterval(refreshWait, 200);
-
-  function refreshWait() {
-    const seconds = Math.max(0, Math.ceil((MIN_REPAIR_MS - (performance.now() - start)) / 1000));
-    dialog.querySelector('#repairWait').textContent = seconds
-      ? `请阅读页面内容，${seconds} 秒后可继续。`
-      : '现在可以继续。';
-    continueButton.disabled = Boolean(seconds || (hasChoice && !chosen));
-    if (!seconds) clearInterval(repairTimer);
-  }
 
   function finishRepair() {
     if (hasChoice && !chosen) return;
-    clearInterval(repairTimer);
     data.repair.dwellMs = Math.round(performance.now() - start);
     data.repair.completedAt = new Date().toISOString();
     log('repair_complete', { choice: chosen, dwellMs: data.repair.dwellMs });
@@ -384,7 +378,7 @@ function renderHandoff() {
   app.innerHTML = `
     <section class="end-card">
       <p class="eyebrow">互动结束</p>
-      <h1>传球练习已完成</h1>
+      <h1>互动结束</h1>
     </section>`;
   resetScroll();
 }
@@ -402,7 +396,7 @@ function renderFormalHandoff() {
   app.innerHTML = `
     <section class="end-card">
       <p class="eyebrow">正式互动结束</p>
-      <h1>请继续填写后测问卷</h1>
+      <h1>互动结束</h1>
     </section>`;
   resetScroll();
 }
