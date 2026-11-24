@@ -6,6 +6,37 @@ const MESSAGES = {
   G4: '抱歉，刚才是我的失误。我把旁边角色的框误认成了你的目标框。你希望怎样处理这次失误？'
 };
 
+const BOBO_SVG = `
+  <svg class="bobo" viewBox="0 0 210 270" role="img" aria-label="一只金色的 AI 宠物狗 Bobo">
+    <ellipse class="dog-shadow" cx="105" cy="241" rx="61" ry="13" fill="rgba(0,0,0,.30)" />
+    <g class="dog-body">
+      <path d="M52 160 C42 184 44 232 60 245 L82 245 L87 187 Z" fill="#d98e21" />
+      <path d="M158 160 C168 184 166 232 150 245 L128 245 L123 187 Z" fill="#d98e21" />
+      <ellipse cx="105" cy="166" rx="57" ry="73" fill="#db942b" />
+      <ellipse cx="105" cy="178" rx="33" ry="61" fill="#f8d88e" />
+      <ellipse cx="74" cy="236" rx="19" ry="11" fill="#f6d489" />
+      <ellipse cx="136" cy="236" rx="19" ry="11" fill="#f6d489" />
+      <path d="M49 78 L55 24 Q60 9 76 31 L88 74 Z" fill="#c57916" />
+      <path d="M161 78 L155 24 Q150 9 134 31 L122 74 Z" fill="#c57916" />
+      <path d="M59 66 L62 35 Q65 26 76 44 L81 67 Z" fill="#e9948d" />
+      <path d="M151 66 L148 35 Q145 26 134 44 L129 67 Z" fill="#e9948d" />
+      <ellipse cx="105" cy="97" rx="59" ry="56" fill="#d98d22" />
+      <ellipse cx="105" cy="120" rx="47" ry="43" fill="#f5cf82" />
+      <path d="M87 61 Q105 47 123 61 L119 93 Q105 101 91 93 Z" fill="#ffe9b1" />
+      <g class="dog-eyes">
+        <ellipse cx="84" cy="99" rx="9" ry="11" fill="#4a2f20" />
+        <ellipse cx="126" cy="99" rx="9" ry="11" fill="#4a2f20" />
+        <circle cx="87" cy="95" r="3" fill="#fff" />
+        <circle cx="129" cy="95" r="3" fill="#fff" />
+      </g>
+      <ellipse cx="105" cy="123" rx="13" ry="9" fill="#35251f" />
+      <path d="M105 130 L105 139" stroke="#5c3822" stroke-width="3" stroke-linecap="round" />
+      <path d="M105 139 Q91 137 87 147 Q101 163 105 148 Q109 163 123 147 Q119 137 105 139" fill="#e97872" />
+      <path class="dog-paw-left" d="M52 169 Q27 187 50 199" fill="none" stroke="#d98e21" stroke-width="17" stroke-linecap="round" />
+      <path class="dog-paw-right" d="M158 169 Q183 187 160 199" fill="none" stroke="#d98e21" stroke-width="17" stroke-linecap="round" />
+    </g>
+  </svg>`;
+
 const SUCCESS = '本轮结果：球进入目标框（你）；传球成功。';
 const BREACH = '本轮结果：球进入其他框（旁边角色）；未进入目标框（你）。';
 const MIN_REPAIR_MS = 8000;
@@ -132,7 +163,7 @@ function stageMarkup() {
       <div class="person ${other} bystander" aria-label="旁边角色"></div>
       <span class="person-label ${target}">你</span>
       <span class="person-label ${other}">旁边角色</span>
-      <div class="dog-wrap pet" id="pet"><img src="bobo.svg" alt="AI 宠物狗 Bobo"></div>
+      <div class="dog-wrap pet" id="pet">${BOBO_SVG}</div>
       <div class="ball" id="ball" aria-label="球" style="opacity:0"></div>
       <div class="game-actions" id="gameActions"></div>
     </section>`;
@@ -210,6 +241,13 @@ async function moveBallTo(el, duration = 850) {
   }
 }
 
+const PET_MOTIONS = ['ready', 'catching', 'throw-left', 'throw-right', 'happy', 'sad'];
+function setPetMotion(pet, motion) {
+  pet.classList.remove(...PET_MOTIONS);
+  void pet.offsetWidth;
+  pet.classList.add(motion);
+}
+
 async function playRound(mode) {
   if (busy) return;
   busy = true;
@@ -217,15 +255,17 @@ async function playRound(mode) {
   actions.querySelector('button').disabled = true;
   const pet = app.querySelector('#pet');
   app.querySelector('#thrower').classList.add('throwing');
+  setPetMotion(pet, 'ready');
   await moveBallTo(pet);
-  pet.classList.add('catching');
-  await wait(360);
-  pet.classList.remove('catching');
+  setPetMotion(pet, 'catching');
+  await wait(540);
   const breach = mode === 'breach';
   const goal = app.querySelector(breach ? '#otherGoal' : '#targetGoal');
+  setPetMotion(pet, goal.classList.contains('left') ? 'throw-left' : 'throw-right');
   await moveBallTo(goal, 920);
   goal.classList.add('received');
-  if (!breach) pet.classList.add('happy');
+  setPetMotion(pet, breach ? 'sad' : 'happy');
+  await wait(650);
 
   log('round_complete', { mode, outcome: breach ? 'breach' : 'success' });
   data.rounds.push({ mode, outcome: breach ? 'other' : 'target', at: new Date().toISOString() });

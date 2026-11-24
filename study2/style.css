@@ -153,17 +153,76 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
   height: 270px;
   transform: translate(-50%, -42%);
 }
-.dog-wrap img {
+.bobo {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  overflow: visible;
   filter: drop-shadow(0 12px 10px rgba(0, 0, 0, .3));
 }
-.dog-wrap.bounce img, .dog-wrap.happy img { animation: dogBounce 520ms ease-in-out; }
-@keyframes dogBounce {
-  0%, 100% { transform: translateY(0); }
-  45% { transform: translateY(-13px); }
+.dog-body { transform-origin: 105px 194px; animation: dogIdle 3s ease-in-out infinite; }
+.dog-eyes { transform-origin: 105px 99px; animation: dogBlink 5s infinite; }
+.dog-shadow { transform-origin: 105px 241px; animation: dogShadow 3s ease-in-out infinite; }
+.dog-paw-left, .dog-paw-right { transform-box: view-box; }
+.dog-paw-left { transform-origin: 52px 169px; }
+.dog-paw-right { transform-origin: 158px 169px; }
+.dog-wrap.ready .dog-body { animation: dogReady 560ms ease-in-out infinite; }
+.dog-wrap.catching .dog-body { animation: dogCatch 540ms ease-out both; }
+.dog-wrap.throw-left .dog-body { animation: dogThrowLeft 920ms ease-in-out both; }
+.dog-wrap.throw-right .dog-body { animation: dogThrowRight 920ms ease-in-out both; }
+.dog-wrap.throw-left .dog-paw-left { animation: pawThrowLeft 920ms ease-in-out both; }
+.dog-wrap.throw-right .dog-paw-right { animation: pawThrowRight 920ms ease-in-out both; }
+.dog-wrap.happy .dog-body { animation: dogHappy 720ms ease-in-out both; }
+.dog-wrap.sad .dog-body { animation: dogSad 720ms ease-out both; }
+@keyframes dogIdle {
+  0%, 100% { transform: translateY(0) rotate(-1deg) scale(1); }
+  50% { transform: translateY(-6px) rotate(1deg) scale(1.02); }
+}
+@keyframes dogBlink {
+  0%, 39%, 41%, 100% { transform: scaleY(1); }
+  40% { transform: scaleY(.08); }
+}
+@keyframes dogShadow {
+  0%, 100% { transform: scaleX(1); opacity: .7; }
+  50% { transform: scaleX(.87); opacity: .45; }
+}
+@keyframes dogReady {
+  0%, 100% { transform: translateY(-3px) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg) scale(1.03); }
+}
+@keyframes dogCatch {
+  0% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(7px) scale(.96, 1.02); }
+  58% { transform: translateY(-23px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes dogThrowLeft {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  25% { transform: translateX(8px) rotate(5deg); }
+  62% { transform: translateX(-11px) rotate(-9deg); }
+}
+@keyframes dogThrowRight {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  25% { transform: translateX(-8px) rotate(-5deg); }
+  62% { transform: translateX(11px) rotate(9deg); }
+}
+@keyframes pawThrowLeft {
+  0%, 100% { transform: rotate(0); }
+  58% { transform: rotate(-25deg); }
+}
+@keyframes pawThrowRight {
+  0%, 100% { transform: rotate(0); }
+  58% { transform: rotate(25deg); }
+}
+@keyframes dogHappy {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  38% { transform: translateY(-19px) rotate(-5deg); }
+  72% { transform: translateY(-4px) rotate(5deg); }
+}
+@keyframes dogSad {
+  0% { transform: translateY(0) rotate(0); }
+  45% { transform: translateY(11px) rotate(-4deg); }
+  100% { transform: translateY(8px) rotate(0); }
 }
 
 .person {
@@ -204,6 +263,12 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
 }
 .person-label.left { left: calc(5% - 31px); }
 .person-label.right { right: calc(5% - 31px); }
+.person.throwing { transform-origin: 50% 100%; animation: personThrow 620ms ease-out; }
+@keyframes personThrow {
+  0%, 100% { transform: rotate(0) translateX(0); }
+  35% { transform: rotate(-12deg) translateX(-5px); }
+  70% { transform: rotate(11deg) translateX(7px); }
+}
 
 .ball {
   position: absolute;
@@ -360,5 +425,6 @@ h2 { margin-bottom: 12px; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; }
 }
 @media (prefers-reduced-motion: reduce) {
   .btn, .basket, .choice { transition: none; }
-  .dog-wrap.bounce img, .dog-wrap.happy img, .basket.received { animation-duration: 1ms; }
+  .dog-body, .dog-eyes, .dog-shadow, .dog-paw-left, .dog-paw-right, .person.throwing { animation: none !important; }
+  .basket.received { animation-duration: 1ms; }
 }
