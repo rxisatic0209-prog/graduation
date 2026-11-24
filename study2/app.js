@@ -127,7 +127,7 @@ function renderIntro() {
   app.innerHTML = `
     <section class="intro-card">
       <p class="eyebrow">认识 Bobo</p>
-      <h1>一只会和你互动的 AI 宠物狗</h1>
+      <h1>和AI宠物Bobo一起玩传球游戏</h1>
       <p class="lead">接下来，请先了解传球规则，再和 Bobo 练习三次传球。</p>
       <div class="actions" id="introActions"></div>
     </section>`;
@@ -278,7 +278,7 @@ async function playRound(mode) {
 
   dialog.innerHTML = `
     <p class="eyebrow">传球反馈</p>
-    <h2 id="roundDialogTitle" tabindex="-1">本轮传球结果</h2>
+    <h2 id="roundDialogTitle" tabindex="-1">传球成功！</h2>
     <p class="result-message">${SUCCESS}</p>
     <div class="actions modal-actions" id="resultActions"></div>`;
   dialog.classList.add('result-only');
@@ -384,7 +384,7 @@ function renderHandoff() {
 }
 
 function renderFormalHandoff() {
-  setStep('正式互动结束');
+  setStep('互动结束');
   data.completedAt = new Date().toISOString();
   log('formal_complete');
   persist();
@@ -395,7 +395,7 @@ function renderFormalHandoff() {
   });
   app.innerHTML = `
     <section class="end-card">
-      <p class="eyebrow">正式互动结束</p>
+      <p class="eyebrow">互动结束</p>
       <h1>互动结束</h1>
     </section>`;
   resetScroll();
