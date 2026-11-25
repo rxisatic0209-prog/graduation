@@ -171,8 +171,7 @@ function stageMarkup() {
 
 function gameTitle(mode) {
   if (mode === 'practice') return `第 ${practiceRound} / ${PRACTICE_ROUNDS} 次练习`;
-  if (mode === 'breach') return '接下来的一轮传球';
-  return `第 ${round} / 3 轮互动`;
+  return `第 ${round} 轮互动`;
 }
 
 function renderGame(mode) {
@@ -284,7 +283,7 @@ async function playRound(mode) {
   dialog.classList.add('result-only');
   const nextLabel = mode === 'practice'
     ? practiceRound === PRACTICE_ROUNDS ? '完成练习' : '下一次练习'
-    : round === 3 ? '继续传球' : '下一轮';
+    : '下一轮';
   dialog.querySelector('#resultActions').append(button(nextLabel, () => {
     dialog.close();
     if (mode === 'practice') {
